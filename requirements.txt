@@ -1,4 +1,5 @@
 streamlit
 requests
+sqlite3
 pandas
 folium
