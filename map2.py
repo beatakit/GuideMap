@@ -49,8 +49,11 @@ if search_text:
     # params = {"q": search_text, "format": "json", "limit": 1, "addressdetails": 1, "countrycodes": "lt"}
     headers = {"User-Agent": "GuideMap/1.0"}
     response = requests.get(url.format(search_text), headers=headers) # timeout=1,
-    st.write(response)
-    st.write(response.text)
+    if response > 1:
+        st.write("Found {response} objects")
+
+    # st.write(response)
+    # st.write(response.text)
     rsp = response.json() # json pakeitem i python koda
 
     if rsp:
