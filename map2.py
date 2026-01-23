@@ -49,8 +49,9 @@ if search_text:
     # params = {"q": search_text, "format": "json", "limit": 1, "addressdetails": 1, "countrycodes": "lt"}
     headers = {"User-Agent": "GuideMap/1.0"}
     response = requests.get(url.format(search_text), headers=headers) # timeout=1,
-    if response > 1:
-        st.write("Found {response} objects")
+    count = len(response)
+    if count > 1:
+        st.write("Found {count} objects")
 
     # st.write(response)
     # st.write(response.text)
