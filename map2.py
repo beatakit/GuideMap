@@ -13,6 +13,17 @@ st.set_page_config(page_title="Vilnius Old Town Map", layout="wide", page_icon="
 VILNIUS = (54.6870458, 25.2829111)
 senamiestis = {"lat_min": 54.673, "lat_max": 54.695, "lon_min": 25.265, "lon_max": 25.295}
 
+if "lat" not in st.session_state:
+    st.session_state.lat = float(VILNIUS[0])
+if "lon" not in st.session_state:
+    st.session_state.lon = float(VILNIUS[1])
+if "selected_label" not in st.session_state:
+    st.session_state.selected_label = None
+
+def in_bounds(lat: float, lon: float, b: dict) -> bool:
+    return (b["lat_min"] <= lat <= b["lat_max"]) and (b["lon_min"] <= lon <= b["lon_max"])
+
+
 # Database setup
 @st.cache_resource
 def get_db():
@@ -49,35 +60,61 @@ if search_text:
     # params = {"q": search_text, "format": "json", "limit": 1, "addressdetails": 1, "countrycodes": "lt"}
     headers = {"User-Agent": "GuideMap/1.0"}
     response = requests.get(url.format(search_text), headers=headers) # timeout=1,
-    if response.status_code == 200:
+    if response is not None and response.status_code == 200:
         data = response.json()      # extract JSON list
         count = len(data)           # count objects
 
-        if count > 0:
-            st.write(f"Found {count} objects")
-        else:
-            st.write("No objects found")
+        if count == 0:
+            st.sidebar.warning("Place not found!")
+            
+        elif count ==1:
+            item = data[0]
+            st.session_state.lat = float(item["lat"])
+            st.session_state.lon = float(item["lon"])
+            st.sidebar.success(f"Coordinates found: {st.session_state.lat:.6f}, {st.session_state.lon:.6f}")
+        else: 
+            st.sidebar.success(f"Found {count} objects")
+
+            # Build dropdown options (label -> item)
+            options = {
+                f"{i+1}. {item.get('display_name', 'Unknown')}  ({item['lat']}, {item['lon']})": item
+                for i, item in enumerate(data)
+            }
+
+            selected_label = st.sidebar.selectbox(
+                "Select a result (coordinates)",
+                list(options.keys())
+            )
+
+            selected = options[selected_label]
+            lat = float(selected["lat"])
+            lon = float(selected["lon"])
+
+            st.sidebar.write(f"Selected: {lat}, {lon}")
+            # use lat/lon for your map, etc.
+        
     else:
-        st.error("Search request failed")
+        st.sidebar.warning("Search request failed")
 
     # st.write(response)
     # st.write(response.text)
+    
     rsp = response.json() # json pakeitem i python koda
+    # if rsp:
+    #     selected_lat = float(rsp[0]["lat"])
+    #     selected_lon = float(rsp[0]["lon"])
+    #     st.sidebar.success(f"Coordinates found: {selected_lat:.6f}, {selected_lon:.6f}")
+    # else:
+    #     st.sidebar.warning("Place not found!")
 
-    if rsp:
-        selected_lat = float(rsp[0]["lat"])
-        selected_lon = float(rsp[0]["lon"])
-        st.sidebar.success(f"Coordinates found: {selected_lat:.6f}, {selected_lon:.6f}")
-    else:
-        st.sidebar.warning("Place not found!")
 
 # Sidebar: Add a Place
 st.sidebar.header("➕ Add a Place")
 with st.sidebar.form("add_point_form"):
     name = st.text_input("Name")
     category = st.text_input("Category")
-    lat = st.number_input("Latitude", value=float(selected_lat), format="%.6f")
-    lon = st.number_input("Longitude", value=float(selected_lon), format="%.6f")
+    lat = st.number_input("Latitude", key="lat", format="%.6f")
+    lon = st.number_input("Longitude", key="lon", format="%.6f")
     desc = st.text_area("Description")
     submitted = st.form_submit_button("Add Point")
 
